@@ -1,0 +1,106 @@
+{% extends "program/modules/adminonsite/webapp.html" %}
+{% block title %}Classes — {{ program.niceName }}{% endblock %}
+
+{% block body %}
+<div class="main admin-main">
+
+    <div class="admin-header">
+        <h2>Classes</h2>
+        <div class="search-bar">
+            <i class="material-icons md-3">search</i>
+            <input type="text" id="class-search" placeholder="Search classes..." autocomplete="off">
+        </div>
+    </div>
+
+    <div class="class-list" id="class-list">
+        {% for sec in sections %}
+        <div class="class-card" data-title="{{ sec.title|lower }}" data-code="{{ sec.code|lower }}">
+            <a class="no-dec" href="/onsite/{{ one }}/{{ two }}/adminonsite_classdetail/{{ sec.id }}">
+                <div class="class-card-header">
+                    <span class="class-code">{{ sec.code }}</span>
+                    <span
+                        class="class-reg-status {% if sec.registration_open %}status-open{% else %}status-closed{% endif %}">
+                        {{ sec.registration_open|yesno:"OPEN,CLOSED" }}
+                    </span>
+                </div>
+                <div class="class-title">{{ sec.title }}</div>
+                <div class="class-meta">
+                    <span><i class="material-icons md-2">schedule</i> {{ sec.timeslot }}</span>
+                    <span><i class="material-icons md-2">room</i> {{ sec.room }}</span>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill {% if sec.percent >= 100 %}progress-full{% elif sec.percent >= 80 %}progress-high{% else %}progress-normal{% endif %}"
+                            style="width: {% if sec.percent > 100 %}100{% else %}{{ sec.percent }}{% endif %}%">
+                        </div>
+                    </div>
+                    <span class="progress-label">{{ sec.enrolled }} / {{ sec.capacity }}</span>
+                </div>
+            </a>
+            <div class="class-card-actions">
+                <button class="toggle-btn {% if sec.registration_open %}btn-close{% else %}btn-open{% endif %}"
+                    data-section-id="{{ sec.id }}"
+                    data-action="{% if sec.registration_open %}close{% else %}open{% endif %}"
+                    title="{% if sec.registration_open %}Close registration{% else %}Open registration{% endif %}">
+                    <i class="material-icons">{% if sec.registration_open %}lock{% else %}lock_open{% endif %}</i>
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <i class="material-icons" style="font-size:6vh; color:#999;">inbox</i>
+            <p>No active sections found.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        // Client-side search filter
+        $('#class-search').on('input', function () {
+            var q = $(this).val().toLowerCase();
+            $('.class-card').each(function () {
+                var title = $(this).data('title');
+                var code = $(this).data('code');
+                if (title.indexOf(q) > -1 || code.indexOf(q) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Toggle registration with confirmation
+        $('.toggle-btn').on('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var btn = $(this);
+            var sectionId = btn.data('section-id');
+            var action = btn.data('action');
+            var verb = action === 'close' ? 'CLOSE' : 'OPEN';
+
+            if (!confirm('Are you sure you want to ' + verb + ' registration for this section?')) {
+                return;
+            }
+
+            $.post('/onsite/{{ one }}/{{ two }}/adminonsite_toggle_reg', {
+                section_id: sectionId,
+                action: action,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            }, function (data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            }).fail(function () {
+                alert('Failed to update registration status.');
+            });
+        });
+    })();
+</script>
+{% endblock %}
