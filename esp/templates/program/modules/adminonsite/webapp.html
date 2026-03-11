@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css?family=Josefin+Sans" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="/media/default_styles/webapp.css" />
+    <link rel="stylesheet" type="text/css" href="/media/default_styles/adminonsite.css?v={% now 'U' %}" />
+    <title>
+        {% block title %}Admin Dashboard — {{ program.niceName }}{% endblock %}
+    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar admin-navbar">
+  <div class="nav-links">
+    <a class="nav-item {% if webapp_page == 'dashboard' %}selected{% endif %}" href="{{ module_base_url }}/adminonsite">
+      <i class="material-icons md-5">dashboard</i><span>Dashboard</span>
+    </a>
+    <a class="nav-item {% if webapp_page == 'classes' %}selected{% endif %}" href="{{ module_base_url }}/adminonsite_classes">
+      <i class="material-icons md-5">class</i><span>Classes</span>
+    </a>
+    <a class="nav-item {% if webapp_page == 'settings' %}selected{% endif %}" href="{{ module_base_url }}/adminonsite_settings">
+      <i class="material-icons md-5">settings</i><span>Settings</span>
+    </a>
+  </div>
+</nav>
+
+{% block body %}{% endblock %}
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/{{ settings.JQUERY_VERSION }}/jquery.min.js" integrity="{{ settings.JQUERY_HASH }}" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-migrate-3.3.2.{% if not settings.DEBUG %}min.{% endif %}js"></script>
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

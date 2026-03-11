@@ -1,0 +1,104 @@
+{% extends "program/modules/adminonsite/webapp.html" %}
+{% block title %}Dashboard — {{ program.niceName }}{% endblock %}
+
+{% block body %}
+<div class="main admin-main">
+
+    <div class="admin-header">
+        <h2>{{ program.niceName }}</h2>
+        <div class="last-updated" id="last-updated">
+            <i class="material-icons md-2">access_time</i>
+            <span id="update-time">Just now</span>
+        </div>
+    </div>
+
+    
+    <div class="stat-grid">
+        <div class="stat-card stat-green">
+            <div class="stat-number" id="stat-students-checkin">{{ stats.students_checked_in }}</div>
+            <div class="stat-label">Students Checked In</div>
+        </div>
+        <div class="stat-card stat-blue">
+            <div class="stat-number" id="stat-total-enrolled">{{ stats.total_enrolled }}</div>
+            <div class="stat-label">Total Enrolled</div>
+        </div>
+        <div class="stat-card stat-teal">
+            <div class="stat-number" id="stat-teachers-checkin">{{ stats.teachers_checked_in }} / {{ stats.teachers_total }}</div>
+            <div class="stat-label">Teachers Checked In</div>
+        </div>
+        <div class="stat-card {% if stats.missing_teachers > 0 %}stat-red{% else %}stat-green{% endif %}">
+            <div class="stat-number" id="stat-missing-teachers">{{ stats.missing_teachers }}</div>
+            <div class="stat-label">Missing Teachers</div>
+        </div>
+        <div class="stat-card stat-neutral">
+            <div class="stat-number" id="stat-sections-open">{{ stats.sections_open }}</div>
+            <div class="stat-label">Classes Open</div>
+        </div>
+        <div class="stat-card stat-neutral">
+            <div class="stat-number" id="stat-sections-closed">{{ stats.sections_closed }}</div>
+            <div class="stat-label">Classes Closed</div>
+        </div>
+    </div>
+
+    
+    {% if missing_teachers %}
+    <div class="alert-section">
+        <h3><i class="material-icons md-3">warning</i> Missing Teachers Today</h3>
+        <div class="alert-list">
+            {% for mt in missing_teachers %}
+            <div class="alert-item">
+                <span class="alert-teacher">{{ mt.teacher_name }}</span>
+                <span class="alert-class">{{ mt.section_code }} — {{ mt.class_title }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    
+    <div class="quick-actions">
+        <a class="action-btn" href="{{ module_base_url }}/adminonsite_classes">
+            <i class="material-icons">list</i> View All Classes
+        </a>
+        <a class="action-btn" href="{{ module_base_url }}/adminonsite_teachercheckin">
+            <i class="material-icons">how_to_reg</i> Teacher Check-in
+        </a>
+        <a class="action-btn" href="{{ module_base_url }}/adminonsite_studentcheckin_search">
+            <i class="material-icons">person_add</i> Student Check-in
+        </a>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var refreshInterval = parseInt("{{ refresh_interval|default:'10' }}", 10) * 1000;
+        var dataUrl = '{{ module_base_url }}/adminonsite_data';
+
+    function updateDashboard() {
+        $.getJSON(dataUrl, function (data) {
+            var s = data.stats;
+            $('#stat-students-checkin').text(s.students_checked_in);
+            $('#stat-total-enrolled').text(s.total_enrolled);
+            $('#stat-teachers-checkin').text(s.teachers_checked_in + ' / ' + s.teachers_total);
+            $('#stat-missing-teachers').text(s.missing_teachers);
+            $('#stat-sections-open').text(s.sections_open);
+            $('#stat-sections-closed').text(s.sections_closed);
+
+            // Update missing teachers card color
+            var mtCard = $('#stat-missing-teachers').closest('.stat-card');
+            mtCard.removeClass('stat-red stat-green');
+            mtCard.addClass(s.missing_teachers > 0 ? 'stat-red' : 'stat-green');
+
+            $('#update-time').text(new Date().toLocaleTimeString());
+        });
+    }
+
+    if (refreshInterval > 0) {
+        setInterval(updateDashboard, refreshInterval);
+    }
+}) ();
+</script>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "program/modules/adminonsite/webapp.html" %}
+{% block title %}Student Check-in — {{ program.niceName }}{% endblock %}
+
+{% block body %}
+<div class="main admin-main">
+
+    <div class="admin-header">
+        <div class="back-link">
+            <a href="{{ module_base_url }}/adminonsite" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                <i class="material-icons">arrow_back</i> Back to Dashboard
+            </a>
+        </div>
+        <h2 style="margin-top: 12px;">Student Check-In</h2>
+        <div class="search-bar">
+            <i class="material-icons md-3">person_search</i>
+            <input type="text" id="student-search" placeholder="Type a name or username to find a student." autocomplete="off">
+        </div>
+    </div>
+
+    <div id="student-results" style="margin-top: 8px;"></div>
+
+    <div id="checkin-toast" style="
+        display: none;
+        position: fixed;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #2d7a4f;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 24px;
+        font-size: 15px;
+        font-weight: 600;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        z-index: 9999;
+        white-space: nowrap;
+    ">
+        <i class="material-icons" style="font-size:18px; vertical-align:middle; margin-right:6px;">check_circle</i>
+        <span id="toast-msg"></span>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var searchUrl  = "{{ module_base_url }}/adminonsite_student_search";
+    var checkinUrl = "{{ module_base_url }}/adminonsite_do_student_checkin";
+    var csrfToken  = "{{ csrf_token }}";
+    var searchTimer = null;
+
+    function showToast(msg, isError) {
+        var toast = $('#checkin-toast');
+        toast.css('background', isError ? '#c0392b' : '#2d7a4f');
+        $('#toast-msg').text(msg);
+        toast.fadeIn(200);
+        setTimeout(function () { toast.fadeOut(400); }, 2500);
+    }
+
+    function escHtml(s) {
+        return $('<div>').text(s).html();
+    }
+
+    function renderResults(students) {
+        var $container = $('#student-results');
+        if (!students.length) {
+            $container.html('<p style="text-align:center;color:#888;margin-top:24px;">No students found.</p>');
+            return;
+        }
+        var html = '<h3 style="font-size:13px;font-weight:700;color:#888;margin:0 0 8px 4px;letter-spacing:.05em;">RESULTS</h3>';
+        students.forEach(function (s) {
+            var checkedIn = s.checked_in;
+            html += '<div class="class-card" style="display:flex;flex-direction:column;padding:16px;gap:10px;" data-id="' + s.id + '">';
+            html += '  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">';
+            html += '    <div style="flex:1;min-width:0;">';
+            html += '      <div class="class-title" style="margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(s.name) + '</div>';
+            html += '      <div class="class-code">Username: ' + escHtml(s.username) + '</div>';
+            html += '      <span class="class-reg-status ' + (checkedIn ? 'status-open' : 'status-closed') + '" style="margin-top:5px;display:inline-block;">' + (checkedIn ? 'CHECKED IN' : 'NOT CHECKED IN') + '</span>';
+            html += '    </div>';
+            if (checkedIn) {
+                html += '    <button class="action-btn do-checkin-btn" disabled style="flex-shrink:0;padding:8px 14px;min-width:110px;display:flex;align-items:center;justify-content:center;gap:4px;background:#e8f5e9;color:#2d7a4f;border-color:#a5d6a7;cursor:default;">';
+                html += '      <i class="material-icons" style="font-size:18px;">check</i> Checked In';
+            } else {
+                html += '    <button class="action-btn do-checkin-btn" style="flex-shrink:0;padding:8px 14px;min-width:110px;display:flex;align-items:center;justify-content:center;gap:4px;">';
+                html += '      <i class="material-icons" style="font-size:18px;">qr_code_scanner</i> Check In';
+            }
+            html += '    </button>';
+            html += '  </div>';
+            html += '</div>';
+        });
+        $container.html(html);
+    }
+
+    $('#student-search').on('input', function () {
+        clearTimeout(searchTimer);
+        var q = $(this).val().trim();
+        if (q.length < 2) { $('#student-results').empty(); return; }
+        searchTimer = setTimeout(function () {
+            $.get(searchUrl, { q: q }, function (data) {
+                renderResults(data.students || []);
+            });
+        }, 300);
+    });
+
+    $(document).on('click', '.do-checkin-btn', function () {
+        var btn = $(this);
+        if (btn.prop('disabled')) return;
+        var card = btn.closest('.class-card');
+        var studentId = card.data('id');
+        btn.prop('disabled', true).css('opacity', '0.6');
+        $.post(checkinUrl, { student_id: studentId, csrfmiddlewaretoken: csrfToken })
+        .done(function (data) {
+            card.find('.class-reg-status').removeClass('status-closed').addClass('status-open').text('CHECKED IN');
+            btn.html('<i class="material-icons" style="font-size:18px;">check</i> Checked In')
+               .css({'background':'#e8f5e9','color':'#2d7a4f','border-color':'#a5d6a7','opacity':'1','cursor':'default'})
+               .prop('disabled', true);
+            showToast((data.already ? 'Already checked in: ' : 'Checked in: ') + data.student);
+        })
+        .fail(function () {
+            btn.prop('disabled', false).css('opacity', '1');
+            showToast('Error — please try again.', true);
+        });
+    });
+})();
+</script>
+{% endblock %}

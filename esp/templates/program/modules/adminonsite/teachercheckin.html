@@ -1,0 +1,132 @@
+{% extends "program/modules/adminonsite/webapp.html" %}
+{% block title %}Teacher Check-in — {{ program.niceName }}{% endblock %}
+
+{% block body %}
+<div class="main admin-main">
+
+    <div class="admin-header">
+        <div class="back-link">
+            <a href="{{ module_base_url }}/adminonsite" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                <i class="material-icons">arrow_back</i> Back to Dashboard
+            </a>
+        </div>
+        <h2 style="margin-top: 12px;">Teacher Check-In</h2>
+        <div class="search-bar">
+            <i class="material-icons md-3">search</i>
+            <input type="text" id="teacher-search" placeholder="Search teachers..." autocomplete="off">
+        </div>
+    </div>
+
+    <div class="class-list" id="teacher-list">
+        {% for teacher in teachers %}
+        {% if teacher.id in checked_in_ids %}
+        <div class="class-card teacher-card" data-name="{{ teacher.name|lower }}"
+             style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; gap: 12px;">
+            <div style="flex: 1; min-width: 0;">
+                <div class="class-title" style="margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ teacher.name }}</div>
+                <div class="class-code">{{ teacher.username }}</div>
+            </div>
+            <button class="action-btn" disabled
+                    style="flex-shrink: 0; padding: 8px 14px; width: 110px; display: flex; align-items: center; justify-content: center; gap: 4px; background: #2d7a4f; color: #fff; border-color: #2d7a4f; cursor: default;">
+                <i class="material-icons" style="font-size: 18px;">check</i> Checked In
+            </button>
+        </div>
+        {% else %}
+        <div class="class-card teacher-card" data-name="{{ teacher.name|lower }}"
+             style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; gap: 12px;">
+            <div style="flex: 1; min-width: 0;">
+                <div class="class-title" style="margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ teacher.name }}</div>
+                <div class="class-code">{{ teacher.username }}</div>
+            </div>
+            <button class="action-btn checkin-btn"
+                    data-teacher-id="{{ teacher.id }}"
+                    data-teacher-name="{{ teacher.name|escapejs }}"
+                    style="flex-shrink: 0; padding: 8px 14px; width: 110px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                <i class="material-icons" style="font-size: 18px;">check_circle</i>
+                Check In
+            </button>
+        </div>
+        {% endif %}
+        {% empty %}
+        <div class="empty-state">
+            <i class="material-icons" style="font-size: 48px; color: #999;">people_outline</i>
+            <p>No teachers found.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="checkin-toast" style="
+        display: none;
+        position: fixed;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #2d7a4f;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 24px;
+        font-size: 15px;
+        font-weight: 600;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        z-index: 9999;
+        white-space: nowrap;
+    ">
+        <i class="material-icons" style="font-size:18px; vertical-align:middle; margin-right:6px;">check_circle</i>
+        <span id="toast-msg"></span>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var checkinUrl = "{{ module_base_url }}/adminonsite_do_teacher_checkin";
+        var csrfToken = "{{ csrf_token }}";
+
+        function showToast(msg, isError) {
+            var toast = $('#checkin-toast');
+            toast.css('background', isError ? '#c0392b' : '#2d7a4f');
+            $('#toast-msg').text(msg);
+            toast.fadeIn(200);
+            setTimeout(function () { toast.fadeOut(400); }, 2500);
+        }
+
+        // Client-side search filter
+        $('#teacher-search').on('input', function () {
+            var q = $(this).val().toLowerCase();
+            $('.teacher-card').each(function () {
+                var name = $(this).data('name');
+                $(this).toggle(name.indexOf(q) > -1);
+            });
+        });
+
+        // Teacher check-in AJAX
+        $(document).on('click', '.checkin-btn', function () {
+            var btn = $(this);
+            if (btn.prop('disabled')) return;
+
+            var teacherId = btn.data('teacher-id');
+            var teacherName = btn.data('teacher-name');
+
+            btn.prop('disabled', true).css('opacity', '0.6');
+
+            $.post(checkinUrl, {
+                teacher_id: teacherId,
+                csrfmiddlewaretoken: csrfToken
+            })
+            .done(function (data) {
+                // Visual: mark button as checked in
+                btn.html('<i class="material-icons" style="font-size:18px;">check</i> Checked In')
+                   .css({'background': '#2d7a4f', 'color': '#fff', 'border-color': '#2d7a4f', 'opacity': '1'})
+                   .prop('disabled', true);
+                showToast((data.already ? 'Already checked in: ' : 'Checked in: ') + data.teacher);
+            })
+            .fail(function () {
+                btn.prop('disabled', false).css('opacity', '1');
+                showToast('Error checking in ' + teacherName + '. Try again.', true);
+            });
+        });
+    })();
+</script>
+{% endblock %}
