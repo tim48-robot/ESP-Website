@@ -27,6 +27,7 @@
         .custom-modal .btn-confirm { background: #2196f3; color: white; }
     </style>
 
+    
     <div class="detail-card">
         <div class="detail-title">{{ cls.title }}</div>
         <div class="detail-code">{{ section.emailcode }}</div>
@@ -45,6 +46,7 @@
         </div>
     </div>
 
+    
     <div class="detail-section">
         <h3>Enrollment</h3>
         <div class="big-progress">
@@ -59,7 +61,8 @@
 
     <div class="detail-section">
         <h3>Registration</h3>
-        <div class="toggle-section">
+        
+     <div class="toggle-section">
             <span class="toggle-label {% if is_open %}status-open{% else %}status-closed{% endif %}">
                 Currently: {{ is_open|yesno:"OPEN,CLOSED" }}
             </span>
@@ -72,7 +75,8 @@
 
     <div class="detail-section">
         <h3>Class Capacity</h3>
-        <div class="cap-editor">
+        
+     <div class="cap-editor">
             <label>Max Capacity:</label>
             <div class="cap-input-group">
                 <input type="number" id="cap-input" value="{{ raw_capacity }}" min="0" max="9999">
@@ -81,6 +85,7 @@
         </div>
     </div>
 
+    
     <div class="detail-section">
         <h3>Enrolled Students ({{ num_enrolled }})</h3>
         {% if enrolled_students %}

@@ -33,35 +33,47 @@
         .custom-modal .btn-confirm { background: #2196f3; color: white; }
     </style>
 
+    
     <div class="class-list" id="class-list">
 
         {% for sec in sections %}
 
+        
         <div class="class-card" data-title="{{ sec.title|lower }}" data-code="{{ sec.code|lower }}">
 
+            
             <div class="class-card-header">
 
+                
                 <span class="class-code">{{ sec.code }}</span>
 
+                
                 <span class="class-reg-status {% if sec.registration_open %}status-open{% else %}status-closed{% endif %}">
                     {{ sec.registration_open|yesno:"OPEN,CLOSED" }}
                 </span>
             </div>
 
+            
             <a class="class-card-main no-dec" href="{{ module_base_url }}/adminonsite_classdetail/{{ sec.id }}">
 
+                
                 <div class="class-title">{{ sec.title }}</div>
 
+                
                 <div class="class-meta">
 
+                    
                     <span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 16px;">
                         <i class="material-icons md-2">schedule</i> {{ sec.timeslot }}
                     </span>
 
+                    
                     <span style="display: inline-flex; align-items: center; gap: 4px;">
 
+                        
                         <i class="material-icons md-2">room</i> {{ sec.room }}
 
+                        
                         <button class="toggle-btn subtle-lock {% if sec.registration_open %}is-open{% else %}is-closed{% endif %}"
                             data-section-id="{{ sec.id }}"
                             data-action="{% if sec.registration_open %}close{% else %}open{% endif %}"
@@ -73,15 +85,19 @@
                     </span>
                 </div>
 
+                
                 <div class="progress-container">
 
+                    
                     <div class="progress-bar">
 
+                        
                         <div class="progress-fill {% if sec.percent >= 100 %}progress-full{% elif sec.percent >= 80 %}progress-high{% else %}progress-normal{% endif %}"
                             style="width: {% if sec.percent > 100 %}100{% else %}{{ sec.percent }}{% endif %}%">
                         </div>
                     </div>
 
+                    
                     <div class="progress-label">{{ sec.enrolled }} / {{ sec.capacity }}</div>
                 </div>
 
@@ -89,6 +105,7 @@
         </div>
         {% empty %}
 
+        
         <div class="empty-state">
             <i class="material-icons" style="font-size:48px; color:#999;">inbox</i>
             <p>No active sections found.</p>
@@ -97,18 +114,25 @@
 
     </div>
 
+    
     <div id="confirm-modal" class="custom-modal" style="display: none;">
 
+        
         <div class="modal-content">
 
+            
             <h3 id="modal-title">Confirm Action</h3>
 
+            
             <p id="modal-message">Are you sure?</p>
 
+            
             <div class="modal-actions">
 
+                
                 <button id="modal-cancel" class="btn-cancel">Cancel</button>
 
+                
                 <button id="modal-confirm" class="btn-confirm">Yes</button>
             </div>
         </div>

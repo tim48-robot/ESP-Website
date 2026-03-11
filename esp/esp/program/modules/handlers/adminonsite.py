@@ -46,7 +46,7 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonRespons
 from esp.program.models import ClassSubject, ClassSection, StudentRegistration
 from esp.program.models.class_ import OPEN, CLOSED
 from esp.program.modules.base import ProgramModuleObj, needs_admin, main_call, aux_call
-from esp.users.models import ESPUser, Record
+from esp.users.models import ESPUser, Record, RecordType
 from esp.tagdict.models import Tag
 from esp.utils.web import render_to_response
 
@@ -175,9 +175,55 @@ class AdminOnsite(ProgramModuleObj):
             classsubject__parent_program=prog,
             classsubject__status__gte=10
         ).distinct().order_by('last_name', 'first_name')
-        
+
+        now = datetime.now()
+        checked_in_ids = set(Record.objects.filter(
+            program=prog,
+            event__name='teacher_checked_in',
+            time__year=now.year,
+            time__month=now.month,
+            time__day=now.day,
+        ).values_list('user_id', flat=True))
+
         context['teachers'] = teachers
+        context['checked_in_ids'] = checked_in_ids
         return render_to_response(self.baseDir() + 'teachercheckin.html', request, context)
+
+    # ──────────────────────────────────────────────
+    #  Teacher Check-in POST (AJAX)
+    # ──────────────────────────────────────────────
+    @aux_call
+    @needs_admin
+    def adminonsite_do_teacher_checkin(self, request, tl, one, two, module, extra, prog):
+        """Record a teacher check-in for today."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+
+        try:
+            teacher_id = int(request.POST.get('teacher_id', 0))
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Invalid teacher_id'}, status=400)
+
+        try:
+            teacher = ESPUser.objects.get(pk=teacher_id)
+        except ESPUser.DoesNotExist:
+            return JsonResponse({'error': 'Teacher not found'}, status=404)
+
+        now = datetime.now()
+        already = Record.objects.filter(
+            program=prog,
+            event__name='teacher_checked_in',
+            user=teacher,
+            time__year=now.year,
+            time__month=now.month,
+            time__day=now.day,
+        ).exists()
+
+        if not already:
+            rt = RecordType.objects.get(name='teacher_checked_in')
+            Record.objects.create(user=teacher, event=rt, program=prog, time=now)
+
+        return JsonResponse({'ok': True, 'already': already, 'teacher': teacher.name()})
 
     # ──────────────────────────────────────────────
     #  Student Check-in View
@@ -189,6 +235,84 @@ class AdminOnsite(ProgramModuleObj):
         context = self._base_context(request, prog)
         context['webapp_page'] = 'dashboard'
         return render_to_response(self.baseDir() + 'studentcheckin_search.html', request, context)
+
+    # ──────────────────────────────────────────────
+    #  Student Search AJAX (GET)
+    # ──────────────────────────────────────────────
+    @aux_call
+    @needs_admin
+    def adminonsite_student_search(self, request, tl, one, two, module, extra, prog):
+        """Search registered students by name or username and return JSON."""
+        q = request.GET.get('q', '').strip()
+        if len(q) < 2:
+            return JsonResponse({'students': []})
+
+        from esp.program.models import RegistrationType
+        try:
+            enrolled_type = RegistrationType.get_map().get('Enrolled', None)
+            if enrolled_type:
+                base_qs = ESPUser.objects.filter(
+                    studentregistration__section__parent_class__parent_program=prog,
+                    studentregistration__relationship=enrolled_type,
+                ).distinct()
+            else:
+                base_qs = ESPUser.objects.filter(
+                    classsubject__parent_program=prog
+                ).distinct()
+        except Exception:
+            base_qs = ESPUser.objects.none()
+
+        from django.db.models import Q
+        parts = q.split()
+        if len(parts) >= 2:
+            qs = base_qs.filter(
+                Q(first_name__icontains=parts[0], last_name__icontains=parts[1]) |
+                Q(first_name__icontains=parts[1], last_name__icontains=parts[0]) |
+                Q(username__icontains=q)
+            )
+        else:
+            qs = base_qs.filter(
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q) |
+                Q(username__icontains=q)
+            )
+
+        results = []
+        for student in qs[:10]:
+            results.append({
+                'id': student.id,
+                'name': student.name(),
+                'username': student.username,
+                'checked_in': prog.isCheckedIn(student),
+            })
+        return JsonResponse({'students': results})
+
+    # ──────────────────────────────────────────────
+    #  Student Check-in POST (AJAX)
+    # ──────────────────────────────────────────────
+    @aux_call
+    @needs_admin
+    def adminonsite_do_student_checkin(self, request, tl, one, two, module, extra, prog):
+        """Record a student attended check-in."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+
+        try:
+            student_id = int(request.POST.get('student_id', 0))
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Invalid student_id'}, status=400)
+
+        try:
+            student = ESPUser.objects.get(pk=student_id)
+        except ESPUser.DoesNotExist:
+            return JsonResponse({'error': 'Student not found'}, status=404)
+
+        already = prog.isCheckedIn(student)
+        if not already:
+            rt = RecordType.objects.get(name='attended')
+            Record.objects.create(user=student, event=rt, program=prog)
+
+        return JsonResponse({'ok': True, 'already': already, 'student': student.name()})
 
     # ──────────────────────────────────────────────
     #  JSON Data Endpoint (for AJAX polling)

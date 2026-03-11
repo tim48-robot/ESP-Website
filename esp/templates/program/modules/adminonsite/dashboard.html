@@ -12,6 +12,7 @@
         </div>
     </div>
 
+    
     <div class="stat-grid">
         <div class="stat-card stat-green">
             <div class="stat-number" id="stat-students-checkin">{{ stats.students_checked_in }}</div>
@@ -31,14 +32,15 @@
         </div>
         <div class="stat-card stat-neutral">
             <div class="stat-number" id="stat-sections-open">{{ stats.sections_open }}</div>
-            <div class="stat-label">Sections Open</div>
+            <div class="stat-label">Classes Open</div>
         </div>
         <div class="stat-card stat-neutral">
             <div class="stat-number" id="stat-sections-closed">{{ stats.sections_closed }}</div>
-            <div class="stat-label">Sections Closed</div>
+            <div class="stat-label">Classes Closed</div>
         </div>
     </div>
 
+    
     {% if missing_teachers %}
     <div class="alert-section">
         <h3><i class="material-icons md-3">warning</i> Missing Teachers Today</h3>
@@ -53,6 +55,7 @@
     </div>
     {% endif %}
 
+    
     <div class="quick-actions">
         <a class="action-btn" href="{{ module_base_url }}/adminonsite_classes">
             <i class="material-icons">list</i> View All Classes
