@@ -30,12 +30,12 @@ MIT Educational Studies Program
 Learning Unlimited, Inc.
   527 Franklin St, Cambridge, MA 02139
   Phone: 617-379-0178
-  Email: web-team@learningu.org 
+  Email: web-team@learningu.org
 """
 
 import json
 import logging
-from datetime import datetime # Import essential django utilities 
+from datetime import datetime
 
 from django.db import transaction
 from django.db.models import Count, Sum, F
@@ -169,7 +169,7 @@ class AdminOnsite(ProgramModuleObj):
         """Display a mobile-native teacher checkin UI."""
         context = self._base_context(request, prog)
         context['webapp_page'] = 'dashboard'
-        
+
         # List teachers for this program
         teachers = ESPUser.objects.filter(
             classsubject__parent_program=prog,
