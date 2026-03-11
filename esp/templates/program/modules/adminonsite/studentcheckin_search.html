@@ -1,0 +1,68 @@
+{% extends "program/modules/adminonsite/webapp.html" %}
+{% block title %}Student Check-in — {{ program.niceName }}{% endblock %}
+
+{% block body %}
+<div class="main admin-main">
+
+    <div class="admin-header">
+        <div class="back-link">
+            <a href="{{ module_base_url }}/adminonsite" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                <i class="material-icons">arrow_back</i> Back to Dashboard
+            </a>
+        </div>
+        <h2 style="margin-top: 12px;">Student Check-In</h2>
+        <div class="search-bar">
+            <i class="material-icons md-3">person_search</i>
+            <input type="text" id="student-search" placeholder="Type name or username..." autocomplete="off">
+        </div>
+        <p style="color: #666; font-size: 14px; margin-top: 12px;">
+            Type a name or username to find a student.
+        </p>
+    </div>
+
+    <div class="class-list" id="student-results" style="display: none;">
+        <h3 style="font-size: 14px; font-weight: bold; color: #888; margin-bottom: 8px;">RESULTS</h3>
+        
+        <div class="class-card student-card" style="display: flex; justify-content: space-between; align-items: center; padding: 16px;">
+            <div>
+                <div class="class-title" style="margin-bottom: 4px;" id="sim-name">Student Name</div>
+                <div class="class-code">Username: <span id="sim-user">student123</span></div>
+                <span class="class-reg-status status-closed" style="margin-top: 4px; display: inline-block;">NOT CHECKED IN</span>
+            </div>
+            
+            <button class="action-btn" style="padding: 8px 16px; min-width: 100px; display: flex; align-items: center; justify-content: center; gap: 4px;" onclick="checkInSimulated()">
+                <i class="material-icons" style="font-size: 18px;">qr_code_scanner</i> Check In
+            </button>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function checkInSimulated() {
+        alert('Student checked in successfully.');
+        $('#student-search').val('');
+        $('#student-results').hide();
+    }
+
+    (function () {
+        // Client-side search simulation
+        $('#student-search').on('input', function () {
+            var q = $(this).val().trim();
+            if (q.length > 2) {
+                $('#sim-name').text(capitalize(q));
+                $('#sim-user').text(q.toLowerCase().replace(/\s+/g, '') + Math.floor(Math.random() * 100));
+                $('#student-results').show();
+            } else {
+                $('#student-results').hide();
+            }
+        });
+
+        function capitalize(str) {
+            return str.replace(/\b\w/g, c => c.toUpperCase());
+        }
+    })();
+</script>
+{% endblock %}

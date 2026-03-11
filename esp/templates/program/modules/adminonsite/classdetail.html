@@ -5,12 +5,28 @@
 <div class="main admin-main">
 
     <div class="admin-header">
-        <a class="back-link no-dec" href="/onsite/{{ one }}/{{ two }}/adminonsite_classes">
+        <a class="back-link no-dec" href="{{ module_base_url }}/adminonsite_classes">
             <i class="material-icons md-3">arrow_back</i> Back to Classes
         </a>
     </div>
+    
+    <style>
+        /* Force CSS to bypass any cache */
+        .custom-modal {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 99999;
+        }
+        .custom-modal .modal-content {
+            background: #fff; padding: 24px; border-radius: 12px; width: 90%; max-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: center;
+        }
+        .custom-modal h3 { margin-top: 0; font-size: 18px; margin-bottom: 12px; color: #333; }
+        .custom-modal p { color: #555; margin-bottom: 24px; font-size: 14px; }
+        .custom-modal .modal-actions { display: flex; gap: 12px; justify-content: center; }
+        .custom-modal .btn-cancel, .custom-modal .btn-confirm { padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; }
+        .custom-modal .btn-cancel { background: #eee; color: #333; }
+        .custom-modal .btn-confirm { background: #2196f3; color: white; }
+    </style>
 
-    <!-- Class Info -->
     <div class="detail-card">
         <div class="detail-title">{{ cls.title }}</div>
         <div class="detail-code">{{ section.emailcode }}</div>
@@ -29,13 +45,11 @@
         </div>
     </div>
 
-    <!-- Enrollment Progress -->
     <div class="detail-section">
         <h3>Enrollment</h3>
         <div class="big-progress">
             <div class="progress-bar large">
-                <div class="progress-fill {% if num_enrolled >= capacity %}progress-full{% elif num_enrolled >= capacity|floatformat:"
-                    0"|add:"-5" %}progress-high{% else %}progress-normal{% endif %}"
+                <div class="progress-fill {% if num_enrolled >= capacity %}progress-full{% elif num_enrolled >= capacity|floatformat:'0'|add:'-5' %}progress-high{% else %}progress-normal{% endif %}"
                     style="width: {% if capacity > 0 %}{% widthratio num_enrolled capacity 100 %}{% else %}0{% endif %}%">
                 </div>
             </div>
@@ -43,37 +57,35 @@
         </div>
     </div>
 
-    <!-- Registration Toggle -->
     <div class="detail-section">
         <h3>Registration</h3>
         <div class="toggle-section">
             <span class="toggle-label {% if is_open %}status-open{% else %}status-closed{% endif %}">
                 Currently: {{ is_open|yesno:"OPEN,CLOSED" }}
             </span>
-            <button id="toggle-reg-btn" class="fancybutton {% if is_open %}btn-close{% else %}btn-open{% endif %}"
+            <button id="toggle-reg-btn" class="primary-btn {% if is_open %}btn-close{% else %}btn-open{% endif %}"
                 data-action="{% if is_open %}close{% else %}open{% endif %}">
                 {% if is_open %}Close Registration{% else %}Open Registration{% endif %}
             </button>
         </div>
     </div>
 
-    <!-- Cap Editor -->
     <div class="detail-section">
         <h3>Class Capacity</h3>
         <div class="cap-editor">
             <label>Max Capacity:</label>
             <div class="cap-input-group">
-                <input type="number" id="cap-input" value="{{ capacity }}" min="0" max="9999">
-                <button id="update-cap-btn" class="fancybutton">Update</button>
+                <input type="number" id="cap-input" value="{{ raw_capacity }}" min="0" max="9999">
+                <button id="update-cap-btn" class="primary-btn">Update</button>
             </div>
         </div>
     </div>
 
-    <!-- Enrolled Students -->
     <div class="detail-section">
         <h3>Enrolled Students ({{ num_enrolled }})</h3>
         {% if enrolled_students %}
-        <table class="student-table sortable">
+        <div style="overflow-x: auto;">
+            <table class="student-table sortable">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -89,9 +101,21 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
         {% else %}
         <p class="empty-msg">No students enrolled yet.</p>
         {% endif %}
+    </div>
+
+    <div id="confirm-modal" class="custom-modal" style="display: none;">
+        <div class="modal-content">
+            <h3 id="modal-title">Confirm Action</h3>
+            <p id="modal-message">Are you sure?</p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="btn-cancel">Cancel</button>
+                <button id="modal-confirm" class="btn-confirm">Yes</button>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -100,40 +124,74 @@
 {% block scripts %}
 <script>
     (function () {
-        var sectionId = {{ section.id }
-    };
+        var sectionId = parseInt("{{ section.id }}", 10);
+        var pendingAction = null;
+        var pendingNewCap = null;
 
-    // Toggle registration
-    $('#toggle-reg-btn').on('click', function () {
-        var action = $(this).data('action');
-        var verb = action === 'close' ? 'CLOSE' : 'OPEN';
-        if (!confirm('Are you sure you want to ' + verb + ' registration for this section?')) return;
+        // Open Toggle Registration Modal
+        $('#toggle-reg-btn').on('click', function () {
+            var action = $(this).data('action');
+            var verb = action === 'close' ? 'CLOSE' : 'OPEN';
+            
+            pendingAction = action;
+            $('#modal-message').text('Are you sure you want to ' + verb + ' registration for this section?');
+            var confirmBtn = $('#modal-confirm');
+            if (action === 'close') {
+                confirmBtn.css({'background-color': '#f44336', 'color': 'white'}).text('Yes, Close it');
+            } else {
+                confirmBtn.css({'background-color': '#4caf50', 'color': 'white'}).text('Yes, Open it');
+            }
+            $('#confirm-modal').fadeIn(200);
+        });
 
-        $.post('/onsite/{{ one }}/{{ two }}/adminonsite_toggle_reg', {
-            section_id: sectionId,
-            action: action,
-            csrfmiddlewaretoken: '{{ csrf_token }}'
-        }, function (data) {
-            if (data.success) location.reload();
-            else alert('Error: ' + (data.error || 'Unknown error'));
-        }).fail(function () { alert('Failed to update.'); });
-    });
+        // Open Update Cap Modal
+        $('#update-cap-btn').on('click', function () {
+            var newCap = parseInt($('#cap-input').val());
+            if (isNaN(newCap) || newCap < 0) { alert('Please enter a valid capacity.'); return; }
+            
+            pendingAction = 'update_cap';
+            pendingNewCap = newCap;
+            $('#modal-message').text('Change class capacity to ' + newCap + '?');
+            var confirmBtn = $('#modal-confirm');
+            confirmBtn.css({'background-color': '#2196f3', 'color': 'white'}).text('Yes, Update Cap');
+            $('#confirm-modal').fadeIn(200);
+        });
 
-    // Update cap
-    $('#update-cap-btn').on('click', function () {
-        var newCap = parseInt($('#cap-input').val());
-        if (isNaN(newCap) || newCap < 0) { alert('Please enter a valid capacity.'); return; }
-        if (!confirm('Change capacity to ' + newCap + '?')) return;
+        // Cancel modal
+        $('#modal-cancel').on('click', function(e) {
+            e.preventDefault();
+            $('#confirm-modal').fadeOut(200);
+            pendingAction = null;
+        });
 
-        $.post('/onsite/{{ one }}/{{ two }}/adminonsite_update_cap', {
-            section_id: sectionId,
-            new_cap: newCap,
-            csrfmiddlewaretoken: '{{ csrf_token }}'
-        }, function (data) {
-            if (data.success) location.reload();
-            else alert('Error: ' + (data.error || 'Unknown error'));
-        }).fail(function () { alert('Failed to update capacity.'); });
-    });
-}) ();
+        // Confirm Action
+        $('#modal-confirm').on('click', function(e) {
+            e.preventDefault();
+            if (!pendingAction) return;
+            var btn = $(this);
+            btn.text('Working...').prop('disabled', true);
+
+            if (pendingAction === 'update_cap') {
+                $.post('{{ module_base_url }}/adminonsite_update_cap', {
+                    section_id: sectionId,
+                    new_cap: pendingNewCap,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                }, function (data) {
+                    if (data.success) location.reload();
+                    else { alert('Error: ' + (data.error || 'Unknown error')); $('#confirm-modal').fadeOut(200); btn.prop('disabled', false); }
+                }).fail(function () { alert('Failed to update capacity.'); $('#confirm-modal').fadeOut(200); btn.prop('disabled', false); });
+            } else {
+                $.post('{{ module_base_url }}/adminonsite_toggle_reg', {
+                    section_id: sectionId,
+                    action: pendingAction,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                }, function (data) {
+                    if (data.success) location.reload();
+                    else { alert('Error: ' + (data.error || 'Unknown error')); $('#confirm-modal').fadeOut(200); btn.prop('disabled', false); }
+                }).fail(function () { alert('Failed to update.'); $('#confirm-modal').fadeOut(200); btn.prop('disabled', false); });
+            }
+        });
+
+    }) ();
 </script>
 {% endblock %}

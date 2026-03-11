@@ -11,47 +11,107 @@
             <input type="text" id="class-search" placeholder="Search classes..." autocomplete="off">
         </div>
     </div>
+    
+    <style>
+        /* Force CSS to bypass any cache */
+        .subtle-lock.is-open { color: #4caf50 !important; }
+        .subtle-lock.is-closed { color: #f44336 !important; }
+        .subtle-lock:hover { transform: scale(1.1); opacity: 0.8; }
+        
+        .custom-modal {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 99999;
+        }
+        .custom-modal .modal-content {
+            background: #fff; padding: 24px; border-radius: 12px; width: 90%; max-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: center;
+        }
+        .custom-modal h3 { margin-top: 0; font-size: 18px; margin-bottom: 12px; color: #333; }
+        .custom-modal p { color: #555; margin-bottom: 24px; font-size: 14px; }
+        .custom-modal .modal-actions { display: flex; gap: 12px; justify-content: center; }
+        .custom-modal .btn-cancel, .custom-modal .btn-confirm { padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; }
+        .custom-modal .btn-cancel { background: #eee; color: #333; }
+        .custom-modal .btn-confirm { background: #2196f3; color: white; }
+    </style>
 
     <div class="class-list" id="class-list">
+
         {% for sec in sections %}
+
         <div class="class-card" data-title="{{ sec.title|lower }}" data-code="{{ sec.code|lower }}">
-            <a class="no-dec" href="/onsite/{{ one }}/{{ two }}/adminonsite_classdetail/{{ sec.id }}">
-                <div class="class-card-header">
-                    <span class="class-code">{{ sec.code }}</span>
-                    <span
-                        class="class-reg-status {% if sec.registration_open %}status-open{% else %}status-closed{% endif %}">
-                        {{ sec.registration_open|yesno:"OPEN,CLOSED" }}
+
+            <div class="class-card-header">
+
+                <span class="class-code">{{ sec.code }}</span>
+
+                <span class="class-reg-status {% if sec.registration_open %}status-open{% else %}status-closed{% endif %}">
+                    {{ sec.registration_open|yesno:"OPEN,CLOSED" }}
+                </span>
+            </div>
+
+            <a class="class-card-main no-dec" href="{{ module_base_url }}/adminonsite_classdetail/{{ sec.id }}">
+
+                <div class="class-title">{{ sec.title }}</div>
+
+                <div class="class-meta">
+
+                    <span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 16px;">
+                        <i class="material-icons md-2">schedule</i> {{ sec.timeslot }}
+                    </span>
+
+                    <span style="display: inline-flex; align-items: center; gap: 4px;">
+
+                        <i class="material-icons md-2">room</i> {{ sec.room }}
+
+                        <button class="toggle-btn subtle-lock {% if sec.registration_open %}is-open{% else %}is-closed{% endif %}"
+                            data-section-id="{{ sec.id }}"
+                            data-action="{% if sec.registration_open %}close{% else %}open{% endif %}"
+                            title="{% if sec.registration_open %}Close registration{% else %}Open registration{% endif %}"
+                            style="margin-left: 6px; padding: 2px;">
+
+                            <i class="material-icons">{% if sec.registration_open %}lock_open{% else %}lock{% endif %}</i>
+                        </button>
                     </span>
                 </div>
-                <div class="class-title">{{ sec.title }}</div>
-                <div class="class-meta">
-                    <span><i class="material-icons md-2">schedule</i> {{ sec.timeslot }}</span>
-                    <span><i class="material-icons md-2">room</i> {{ sec.room }}</span>
-                </div>
+
                 <div class="progress-container">
+
                     <div class="progress-bar">
+
                         <div class="progress-fill {% if sec.percent >= 100 %}progress-full{% elif sec.percent >= 80 %}progress-high{% else %}progress-normal{% endif %}"
                             style="width: {% if sec.percent > 100 %}100{% else %}{{ sec.percent }}{% endif %}%">
                         </div>
                     </div>
-                    <span class="progress-label">{{ sec.enrolled }} / {{ sec.capacity }}</span>
+
+                    <div class="progress-label">{{ sec.enrolled }} / {{ sec.capacity }}</div>
                 </div>
+
             </a>
-            <div class="class-card-actions">
-                <button class="toggle-btn {% if sec.registration_open %}btn-close{% else %}btn-open{% endif %}"
-                    data-section-id="{{ sec.id }}"
-                    data-action="{% if sec.registration_open %}close{% else %}open{% endif %}"
-                    title="{% if sec.registration_open %}Close registration{% else %}Open registration{% endif %}">
-                    <i class="material-icons">{% if sec.registration_open %}lock{% else %}lock_open{% endif %}</i>
-                </button>
-            </div>
         </div>
         {% empty %}
+
         <div class="empty-state">
-            <i class="material-icons" style="font-size:6vh; color:#999;">inbox</i>
+            <i class="material-icons" style="font-size:48px; color:#999;">inbox</i>
             <p>No active sections found.</p>
         </div>
         {% endfor %}
+
+    </div>
+
+    <div id="confirm-modal" class="custom-modal" style="display: none;">
+
+        <div class="modal-content">
+
+            <h3 id="modal-title">Confirm Action</h3>
+
+            <p id="modal-message">Are you sure?</p>
+
+            <div class="modal-actions">
+
+                <button id="modal-cancel" class="btn-cancel">Cancel</button>
+
+                <button id="modal-confirm" class="btn-confirm">Yes</button>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -74,20 +134,44 @@
             });
         });
 
-        // Toggle registration with confirmation
+        var pendingActionBtn = null;
+
+        // Open modal
         $('.toggle-btn').on('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            var btn = $(this);
-            var sectionId = btn.data('section-id');
-            var action = btn.data('action');
+            pendingActionBtn = $(this);
+            var action = pendingActionBtn.data('action');
             var verb = action === 'close' ? 'CLOSE' : 'OPEN';
-
-            if (!confirm('Are you sure you want to ' + verb + ' registration for this section?')) {
-                return;
+            
+            $('#modal-message').text('Are you sure you want to ' + verb + ' registration for this section?');
+            var confirmBtn = $('#modal-confirm');
+            if (action === 'close') {
+                confirmBtn.css({'background-color': '#f44336', 'color': 'white'}).text('Yes, Close it');
+            } else {
+                confirmBtn.css({'background-color': '#4caf50', 'color': 'white'}).text('Yes, Open it');
             }
+            $('#confirm-modal').fadeIn(200);
+        });
 
-            $.post('/onsite/{{ one }}/{{ two }}/adminonsite_toggle_reg', {
+        // Cancel modal
+        $('#modal-cancel').on('click', function(e) {
+            e.preventDefault();
+            $('#confirm-modal').fadeOut(200);
+            pendingActionBtn = null;
+        });
+
+        // Confirm Action
+        $('#modal-confirm').on('click', function(e) {
+            e.preventDefault();
+            if (!pendingActionBtn) return;
+            var sectionId = pendingActionBtn.data('section-id');
+            var action = pendingActionBtn.data('action');
+            var btn = $(this);
+            
+            btn.text('Working...').prop('disabled', true);
+
+            $.post('{{ module_base_url }}/adminonsite_toggle_reg', {
                 section_id: sectionId,
                 action: action,
                 csrfmiddlewaretoken: '{{ csrf_token }}'
@@ -96,9 +180,13 @@
                     location.reload();
                 } else {
                     alert('Error: ' + (data.error || 'Unknown error'));
+                    $('#confirm-modal').fadeOut(200);
+                    btn.prop('disabled', false);
                 }
             }).fail(function () {
                 alert('Failed to update registration status.');
+                $('#confirm-modal').fadeOut(200);
+                btn.prop('disabled', false);
             });
         });
     })();

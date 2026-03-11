@@ -30,16 +30,18 @@ MIT Educational Studies Program
 Learning Unlimited, Inc.
   527 Franklin St, Cambridge, MA 02139
   Phone: 617-379-0178
-  Email: web-team@learningu.org
+  Email: web-team@learningu.org 
 """
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime # Import essential django utilities 
 
 from django.db import transaction
 from django.db.models import Count, Sum, F
-from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render_to_response, get_object_or_404, redirect
+from django.template import RequestContext
+from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 
 from esp.program.models import ClassSubject, ClassSection, StudentRegistration
 from esp.program.models.class_ import OPEN, CLOSED
@@ -77,6 +79,7 @@ class AdminOnsite(ProgramModuleObj):
             'one': one,
             'two': two,
             'user': request.user,
+            'module_base_url': f"/{self.module_properties()['module_type']}/{one}/{two}",
         }
 
     # ──────────────────────────────────────────────
@@ -125,6 +128,7 @@ class AdminOnsite(ProgramModuleObj):
         context['num_enrolled'] = section.num_students()
         context['capacity'] = section.capacity
         context['is_open'] = section.isRegOpen()
+        context['raw_capacity'] = section.max_class_capacity if section.max_class_capacity is not None else section.capacity
         context['teachers'] = section.parent_class.get_teachers()
         context['meeting_times'] = section.meeting_times.all().order_by('start')
         context['rooms'] = section.classrooms()
@@ -146,15 +150,45 @@ class AdminOnsite(ProgramModuleObj):
             use_checkin = request.POST.get('use_checkin', 'false')
             overenrollment = request.POST.get('overenrollment', 'false')
 
-            Tag.setTag('adminonsite_refresh_interval', program=prog, value=refresh_interval)
-            Tag.setTag('adminonsite_use_checkin', program=prog, value=use_checkin)
-            Tag.setTag('adminonsite_overenrollment', program=prog, value=overenrollment)
+            Tag.setTag('adminonsite_refresh_interval', target=prog, value=refresh_interval)
+            Tag.setTag('adminonsite_use_checkin', target=prog, value=use_checkin)
+            Tag.setTag('adminonsite_overenrollment', target=prog, value=overenrollment)
             context['saved'] = True
 
         context['refresh_interval'] = Tag.getProgramTag('adminonsite_refresh_interval', program=prog, default='10')
         context['use_checkin'] = Tag.getProgramTag('adminonsite_use_checkin', program=prog, default='false')
         context['overenrollment'] = Tag.getProgramTag('adminonsite_overenrollment', program=prog, default='false')
         return render_to_response(self.baseDir() + 'settings.html', request, context)
+
+    # ──────────────────────────────────────────────
+    #  Teacher Check-in View
+    # ──────────────────────────────────────────────
+    @aux_call
+    @needs_admin
+    def adminonsite_teachercheckin(self, request, tl, one, two, module, extra, prog):
+        """Display a mobile-native teacher checkin UI."""
+        context = self._base_context(request, prog)
+        context['webapp_page'] = 'dashboard'
+        
+        # List teachers for this program
+        teachers = ESPUser.objects.filter(
+            classsubject__parent_program=prog,
+            classsubject__status__gte=10
+        ).distinct().order_by('last_name', 'first_name')
+        
+        context['teachers'] = teachers
+        return render_to_response(self.baseDir() + 'teachercheckin.html', request, context)
+
+    # ──────────────────────────────────────────────
+    #  Student Check-in View
+    # ──────────────────────────────────────────────
+    @aux_call
+    @needs_admin
+    def adminonsite_studentcheckin_search(self, request, tl, one, two, module, extra, prog):
+        """Display a mobile-native student checkin UI."""
+        context = self._base_context(request, prog)
+        context['webapp_page'] = 'dashboard'
+        return render_to_response(self.baseDir() + 'studentcheckin_search.html', request, context)
 
     # ──────────────────────────────────────────────
     #  JSON Data Endpoint (for AJAX polling)

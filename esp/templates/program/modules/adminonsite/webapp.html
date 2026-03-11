@@ -4,7 +4,7 @@
     <link href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css?family=Josefin+Sans" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="/media/default_styles/webapp.css" />
-    <link rel="stylesheet" type="text/css" href="/media/default_styles/adminonsite.css" />
+    <link rel="stylesheet" type="text/css" href="/media/default_styles/adminonsite.css?v={% now 'U' %}" />
     <title>
         {% block title %}Admin Dashboard — {{ program.niceName }}{% endblock %}
     </title>
@@ -14,31 +14,24 @@
 </head>
 <body>
 
-<div class="navbar">
-  <table>
-    <tr>
-      <td{% if webapp_page == "dashboard" %} class="selected"{% endif %}>
-        <a class="no-dec" href="/onsite/{{ one }}/{{ two }}/adminonsite" style="display:block;">
-          <i class="material-icons md-5">dashboard</i><br>Dashboard
-        </a>
-      </td>
-      <td{% if webapp_page == "classes" %} class="selected"{% endif %}>
-        <a class="no-dec" href="/onsite/{{ one }}/{{ two }}/adminonsite_classes" style="display:block;">
-          <i class="material-icons md-5">class</i><br>Classes
-        </a>
-      </td>
-      <td{% if webapp_page == "settings" %} class="selected"{% endif %}>
-        <a class="no-dec" href="/onsite/{{ one }}/{{ two }}/adminonsite_settings" style="display:block;">
-          <i class="material-icons md-5">settings</i><br>Settings
-        </a>
-      </td>
-    </tr>
-  </table>
-</div>
+<nav class="navbar admin-navbar">
+  <div class="nav-links">
+    <a class="nav-item {% if webapp_page == 'dashboard' %}selected{% endif %}" href="{{ module_base_url }}/adminonsite">
+      <i class="material-icons md-5">dashboard</i><span>Dashboard</span>
+    </a>
+    <a class="nav-item {% if webapp_page == 'classes' %}selected{% endif %}" href="{{ module_base_url }}/adminonsite_classes">
+      <i class="material-icons md-5">class</i><span>Classes</span>
+    </a>
+    <a class="nav-item {% if webapp_page == 'settings' %}selected{% endif %}" href="{{ module_base_url }}/adminonsite_settings">
+      <i class="material-icons md-5">settings</i><span>Settings</span>
+    </a>
+  </div>
+</nav>
 
 {% block body %}{% endblock %}
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/{{ settings.JQUERY_VERSION }}/jquery.min.js" integrity="{{ settings.JQUERY_HASH }}" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-migrate-3.3.2.{% if not settings.DEBUG %}min.{% endif %}js"></script>
 {% block scripts %}{% endblock %}
 
 </body>

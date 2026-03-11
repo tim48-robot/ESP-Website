@@ -22,10 +22,10 @@
             <div class="setting-row">
                 <label for="refresh_interval">Dashboard refresh interval (seconds):</label>
                 <select name="refresh_interval" id="refresh_interval">
-                    <option value="5" {% if refresh_interval=="5" %}selected{% endif %}>5 seconds</option>
-                    <option value="10" {% if refresh_interval=="10" %}selected{% endif %}>10 seconds</option>
-                    <option value="30" {% if refresh_interval=="30" %}selected{% endif %}>30 seconds</option>
-                    <option value="0" {% if refresh_interval=="0" %}selected{% endif %}>Off (manual only)</option>
+                    <option value="5" {% if refresh_interval == "5" %}selected{% endif %}>5 seconds</option>
+                    <option value="10" {% if refresh_interval == "10" %}selected{% endif %}>10 seconds</option>
+                    <option value="30" {% if refresh_interval == "30" %}selected{% endif %}>30 seconds</option>
+                    <option value="0" {% if refresh_interval == "0" %}selected{% endif %}>Off (manual only)</option>
                 </select>
             </div>
         </div>
@@ -35,9 +35,9 @@
             <div class="setting-row">
                 <label for="use_checkin">Use check-in numbers (instead of enrollment) for progress bars:</label>
                 <select name="use_checkin" id="use_checkin">
-                    <option value="false" {% if use_checkin=="false" %}selected{% endif %}>No — use enrollment count
+                    <option value="false" {% if use_checkin == "false" %}selected{% endif %}>No — use enrollment count
                     </option>
-                    <option value="true" {% if use_checkin=="true" %}selected{% endif %}>Yes — use check-in count
+                    <option value="true" {% if use_checkin == "true" %}selected{% endif %}>Yes — use check-in count
                     </option>
                 </select>
             </div>
@@ -48,16 +48,16 @@
             <div class="setting-row">
                 <label for="overenrollment">Allow overenrollment beyond class capacity:</label>
                 <select name="overenrollment" id="overenrollment">
-                    <option value="false" {% if overenrollment=="false" %}selected{% endif %}>No — enforce capacity
+                    <option value="false" {% if overenrollment == "false" %}selected{% endif %}>No — enforce capacity
                         limits</option>
-                    <option value="true" {% if overenrollment=="true" %}selected{% endif %}>Yes — allow over-capacity
+                    <option value="true" {% if overenrollment == "true" %}selected{% endif %}>Yes — allow over-capacity
                     </option>
                 </select>
             </div>
         </div>
 
-        <div class="settings-submit">
-            <button type="submit" class="fancybutton">Save Settings</button>
+        <div class="settings-submit" style="padding: 16px 0;">
+            <button type="submit" class="primary-btn" style="width: 100%; padding: 14px; font-size: 18px; border-radius: 8px;">Save Settings</button>
         </div>
     </form>
 

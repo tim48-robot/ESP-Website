@@ -12,7 +12,6 @@
         </div>
     </div>
 
-    <!-- Stat Cards -->
     <div class="stat-grid">
         <div class="stat-card stat-green">
             <div class="stat-number" id="stat-students-checkin">{{ stats.students_checked_in }}</div>
@@ -23,8 +22,7 @@
             <div class="stat-label">Total Enrolled</div>
         </div>
         <div class="stat-card stat-teal">
-            <div class="stat-number" id="stat-teachers-checkin">{{ stats.teachers_checked_in }} / {{
-                stats.teachers_total }}</div>
+            <div class="stat-number" id="stat-teachers-checkin">{{ stats.teachers_checked_in }} / {{ stats.teachers_total }}</div>
             <div class="stat-label">Teachers Checked In</div>
         </div>
         <div class="stat-card {% if stats.missing_teachers > 0 %}stat-red{% else %}stat-green{% endif %}">
@@ -41,7 +39,6 @@
         </div>
     </div>
 
-    <!-- Missing Teachers Alert -->
     {% if missing_teachers %}
     <div class="alert-section">
         <h3><i class="material-icons md-3">warning</i> Missing Teachers Today</h3>
@@ -56,15 +53,14 @@
     </div>
     {% endif %}
 
-    <!-- Quick Actions -->
     <div class="quick-actions">
-        <a class="action-btn" href="/onsite/{{ one }}/{{ two }}/adminonsite_classes">
+        <a class="action-btn" href="{{ module_base_url }}/adminonsite_classes">
             <i class="material-icons">list</i> View All Classes
         </a>
-        <a class="action-btn" href="/onsite/{{ one }}/{{ two }}/teachercheckin">
+        <a class="action-btn" href="{{ module_base_url }}/adminonsite_teachercheckin">
             <i class="material-icons">how_to_reg</i> Teacher Check-in
         </a>
-        <a class="action-btn" href="/onsite/{{ one }}/{{ two }}/checkin">
+        <a class="action-btn" href="{{ module_base_url }}/adminonsite_studentcheckin_search">
             <i class="material-icons">person_add</i> Student Check-in
         </a>
     </div>
@@ -75,9 +71,8 @@
 {% block scripts %}
 <script>
     (function () {
-        var refreshInterval = {{ refresh_interval|default: "10"
-    }} * 1000;
-    var dataUrl = '/onsite/{{ one }}/{{ two }}/adminonsite_data';
+        var refreshInterval = parseInt("{{ refresh_interval|default:'10' }}", 10) * 1000;
+        var dataUrl = '{{ module_base_url }}/adminonsite_data';
 
     function updateDashboard() {
         $.getJSON(dataUrl, function (data) {
